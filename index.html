@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Komutçu">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+</head>
+<body>
+<title>At-İndir Komutçusu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: atış alanında tek elle kullanılan tek ekran. Üstte durum şeridi, ortada dev komut/dokunma alanı, altta sonuç tuşları. */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --fg:#11151A; --muted:#566170; --line:#D2D8E0;
+  --ring:rgba(17,21,26,.07); --ring-on-fill:rgba(0,0,0,.07); --scrim:rgba(10,14,18,.45);
+  --gold:#FFE552; --gold-ink:#1D1900; --blue:#00B4E4; --blue-ink:#00242F; --focus:#0089B0;
+  --o-rahat:#2E9E5B; --o-tedirgin:#D9AA2B; --o-zorladim:#E07A2E; --o-gelemedim:#8A59CF; --o-erken:#D2343E;
+  --ok-bg:#E2F3E8; --ok-fg:#17643A; --warn-bg:#FBF0D6; --warn-fg:#7A5200; --bad-bg:#FBE3E4; --bad-fg:#9E1F28;
+  --font-display:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --font-ui:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1115; --surface:#171B21; --fg:#E7EAEE; --muted:#98A1AD; --line:#2A3039;
+    --ring:rgba(231,234,238,.06); --ring-on-fill:rgba(0,0,0,.08); --scrim:rgba(0,0,0,.6);
+    --gold:#FFE552; --gold-ink:#1D1900; --blue:#2BC0EA; --blue-ink:#00242F; --focus:#5FD3F3;
+    --o-rahat:#3DB872; --o-tedirgin:#E6BE52; --o-zorladim:#EE8A3E; --o-gelemedim:#A57BE6; --o-erken:#EC525B;
+    --ok-bg:#15301F; --ok-fg:#8FE0AE; --warn-bg:#352A10; --warn-fg:#F0CB73; --bad-bg:#3A1619; --bad-fg:#F49AA0;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1115; --surface:#171B21; --fg:#E7EAEE; --muted:#98A1AD; --line:#2A3039;
+  --ring:rgba(231,234,238,.06); --ring-on-fill:rgba(0,0,0,.08); --scrim:rgba(0,0,0,.6);
+  --gold:#FFE552; --gold-ink:#1D1900; --blue:#2BC0EA; --blue-ink:#00242F; --focus:#5FD3F3;
+  --o-rahat:#3DB872; --o-tedirgin:#E6BE52; --o-zorladim:#EE8A3E; --o-gelemedim:#A57BE6; --o-erken:#EC525B;
+  --ok-bg:#15301F; --ok-fg:#8FE0AE; --warn-bg:#352A10; --warn-fg:#F0CB73; --bad-bg:#3A1619; --bad-fg:#F49AA0;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+.app{height:100%;max-width:560px;margin:0 auto;padding-inline:16px;padding-block:12px;display:flex;flex-direction:column;gap:12px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand{margin:0;font-family:var(--font-display);font-weight:800;font-size:1.35rem;letter-spacing:.02em;text-transform:uppercase;line-height:1}
+.brand span{color:var(--muted);font-weight:600}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:.85rem;font-variant-numeric:tabular-nums;cursor:pointer;max-width:100%;text-align:left}
+
+.stats{display:flex;gap:4px 16px;flex-wrap:wrap;align-items:baseline;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+.stats b{color:var(--fg);font-family:var(--font-display);font-weight:800;font-size:1.3rem;margin-right:4px}
+
+.stage{flex:1 1 auto;min-height:220px;display:flex;flex-direction:column;gap:10px}
+.tap{flex:1 1 auto;width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px 16px;cursor:pointer;position:relative;overflow:hidden;text-align:center;transition:background-color .12s ease}
+.tap::before{content:"";position:absolute;top:0;right:0;bottom:0;left:0;background:repeating-radial-gradient(circle at 50% 50%,transparent 0 34px,var(--ring) 34px 36px);pointer-events:none}
+.tap .big{position:relative;font-family:var(--font-display);font-weight:800;font-size:clamp(3rem,15vw,5.2rem);line-height:.95;text-transform:uppercase;letter-spacing:.01em}
+.tap .sub{position:relative;color:var(--muted);font-size:1rem;max-width:30ch;text-wrap:balance}
+.stage[data-state="waiting"] .big{color:var(--muted)}
+.stage[data-state="at"] .tap{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.stage[data-state="indir"] .tap{background:var(--blue);border-color:var(--blue);color:var(--blue-ink)}
+.stage[data-state="at"] .tap::before,.stage[data-state="indir"] .tap::before{background:repeating-radial-gradient(circle at 50% 50%,transparent 0 34px,var(--ring-on-fill) 34px 36px)}
+.stage[data-state="at"] .big{font-size:clamp(6rem,38vw,11rem)}
+.stage[data-state="indir"] .big{font-size:clamp(4.2rem,26vw,8rem)}
+.stage[data-state="at"] .sub,.stage[data-state="indir"] .sub{color:inherit;opacity:.8}
+
+.waitbar{display:grid;grid-template-columns:1fr auto;gap:10px}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 16px;font-weight:600;cursor:pointer;min-height:52px}
+.ghost.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:transparent}
+
+.pads{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.padhint{grid-column:1/-1;margin:0;color:var(--muted);font-size:.9rem}
+.pad{min-height:58px;border-radius:12px;border:1px solid transparent;font-weight:600;font-size:1.05rem;cursor:pointer;padding:10px}
+.pad.wide{grid-column:1/-1;min-height:72px;font-size:1.3rem}
+.pad.ok{background:var(--ok-bg);color:var(--ok-fg)}
+.pad.warn{background:var(--warn-bg);color:var(--warn-fg)}
+.pad.bad{background:var(--bad-bg);color:var(--bad-fg)}
+
+.note{margin:0;font-size:.9rem;color:var(--warn-fg);background:var(--warn-bg);border-radius:10px;padding:10px 12px}
+.foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.link{background:none;border:0;padding:10px 4px;color:var(--fg);font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line);cursor:pointer}
+.link:disabled{color:var(--muted);cursor:default;text-decoration:none}
+
+.sheet{position:fixed;top:0;right:0;bottom:0;left:0;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.panel{background:var(--surface);color:var(--fg);width:100%;max-width:560px;max-height:88%;overflow-y:auto;-webkit-overflow-scrolling:touch;border-radius:18px 18px 0 0;padding:16px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.panel h2{margin:0;font-family:var(--font-display);font-weight:800;font-size:1.6rem;text-transform:uppercase;letter-spacing:.02em;text-wrap:balance}
+.panel h3{margin:18px 0 4px;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.panel p,.panel li{max-width:62ch}
+.panel ol,.panel ul{padding-left:1.3em;display:grid;gap:8px}
+.field{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-block:12px;border-bottom:1px solid var(--line)}
+.field>div:first-child{min-width:0}
+.lbl{display:block;font-weight:600}
+.desc{display:block;color:var(--muted);font-size:.85rem}
+.hint{margin:8px 0 0;color:var(--muted);font-size:.85rem}
+.hint.warn{color:var(--warn-fg)}
+select{padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);min-height:44px}
+.stepper{display:flex;align-items:center;gap:6px;flex:none}
+.stepper button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:1.4rem;line-height:1;cursor:pointer}
+.stepper output{min-width:2.6ch;text-align:center;font-family:var(--font-display);font-weight:800;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex:none}
+.seg label{position:relative;cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;padding:9px 14px;font-weight:600}
+.seg input:checked+span{background:var(--fg);color:var(--bg)}
+.check{display:flex;gap:10px;align-items:center;cursor:pointer}
+.check input{width:22px;height:22px;flex:none}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;min-height:44px}
+
+.hrow{padding-block:12px;border-bottom:1px solid var(--line);display:grid;gap:6px}
+.hrow .l1{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.when{font-weight:600}
+.where{color:var(--muted);font-weight:500}
+.live{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ok-fg);background:var(--ok-bg);border-radius:6px;padding:1px 6px;margin-left:6px}
+.pill{font-family:var(--font-display);font-weight:800;font-size:1.1rem;padding:1px 10px;border-radius:999px;font-variant-numeric:tabular-nums;background:var(--bg);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok-fg)}
+.pill.warn{background:var(--warn-bg);color:var(--warn-fg)}
+.pill.bad{background:var(--bad-bg);color:var(--bad-fg)}
+.l3{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums;flex-wrap:wrap;align-items:center}
+.l3 .link{padding:4px 2px;font-size:.85rem}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--line)}
+.bar i{display:block;height:100%}
+.o-rahat{background:var(--o-rahat)}
+.o-tedirgin{background:var(--o-tedirgin)}
+.o-zorladim{background:var(--o-zorladim)}
+.o-gelemedim{background:var(--o-gelemedim)}
+.o-erken{background:var(--o-erken)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%}
+.sumbig{font-family:var(--font-display);font-weight:800;font-size:3.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.sumgrid{display:grid;gap:10px;margin-top:8px}
+.advice{background:var(--bg);border-radius:12px;padding:12px 14px;margin:0}
+.copybox{width:100%;min-height:88px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:10px;font-size:.9rem;resize:vertical}
+.empty{color:var(--muted);padding-block:16px}
+
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <h1 class="brand">At-İndir <span>Komutçusu</span></h1>
+    <button type="button" class="chip" id="btnSettings" aria-label="Ayarları aç"><span id="chipText">AT %25</span></button>
+  </header>
+
+  <div class="stats" aria-live="polite">
+    <span><b id="stApp">0</b>yaklaşım</span>
+    <span><b id="stShot">0</b>atış</span>
+    <span><b id="stCalm">–</b>rahat</span>
+  </div>
+
+  <main class="stage" id="stage" data-state="idle">
+    <button type="button" class="tap" id="tap">
+      <span class="big" id="tapBig">Oku taktım</span>
+      <span class="sub" id="tapSub">Dokun. Komut rastgele bir anda kulaklığa gelir.</span>
+    </button>
+    <div class="waitbar" id="waitbar" hidden>
+      <button type="button" class="ghost bad" id="btnEarly">Komuttan önce bıraktım</button>
+      <button type="button" class="ghost" id="btnStop">Durdur</button>
+    </div>
+  </main>
+
+  <section class="pads" id="pads" hidden aria-label="Yaklaşım nasıldı">
+    <p class="padhint">Nasıldı? Seçince sayaç yeniden başlar, atış yaptıysan önce oku tak.</p>
+    <button type="button" class="pad ok wide" data-o="rahat">Rahat</button>
+    <button type="button" class="pad warn" data-o="tedirgin">Tedirgin</button>
+    <button type="button" class="pad warn" data-o="zorladim">Zorladım</button>
+    <button type="button" class="pad bad" data-o="gelemedim">Sarıya gelemedim</button>
+    <button type="button" class="pad bad" data-o="erken">Erken bıraktım</button>
+  </section>
+
+  <p class="note" id="note" hidden></p>
+
+  <footer class="foot">
+    <button type="button" class="link" id="btnHistory">Kayıtlar</button>
+    <button type="button" class="link" id="btnEnd">Seansı bitir</button>
+    <button type="button" class="link" id="btnHelp">Nasıl kullanılır</button>
+  </footer>
+</div>
+
+<div class="sheet" id="sheetSettings" hidden role="dialog" aria-modal="true" aria-labelledby="hSettings">
+  <div class="panel">
+    <div class="panel-head"><h2 id="hSettings">Ayarlar</h2><button type="button" class="link" data-close>Kapat</button></div>
+
+    <h3>Basamak</h3>
+    <div class="field">
+      <div><label class="lbl" for="selDistance">Mesafe</label></div>
+      <select id="selDistance"></select>
+    </div>
+    <div class="field">
+      <div><label class="lbl" for="selFace">Hedef</label></div>
+      <select id="selFace"></select>
+    </div>
+    <div class="field">
+      <div><label class="lbl" for="selBow">Yay</label></div>
+      <select id="selBow"></select>
+    </div>
+    <p class="hint">Mesafe, hedef ya da yay değişince yeni seans başlar. Kayıtlarda basamaklar ayrı görünür.</p>
+
+    <h3>Komut</h3>
+    <div class="field">
+      <div><span class="lbl">AT gelme olasılığı</span><span class="desc">Zorunlu indirişler bittikten sonra her yaklaşımda</span></div>
+      <div class="stepper"><button type="button" id="pMinus" aria-label="AT olasılığını düşür">−</button><output id="pOut"></output><button type="button" id="pPlus" aria-label="AT olasılığını artır">+</button></div>
+    </div>
+    <div class="field">
+      <div><span class="lbl">Bırakıştan sonra en az indiriş</span><span class="desc">Bu kadar yaklaşım hep İNDİR olur</span></div>
+      <div class="stepper"><button type="button" id="gapMinus" aria-label="Azalt">−</button><output id="gapOut"></output><button type="button" id="gapPlus" aria-label="Artır">+</button></div>
+    </div>
+    <p class="hint" id="ruleText"></p>
+
+    <h3>Zamanlama</h3>
+    <div class="field">
+      <div><span class="lbl">En erken</span><span class="desc">Dokunduktan sonra, saniye</span></div>
+      <div class="stepper"><button type="button" id="dminMinus" aria-label="Azalt">−</button><output id="dminOut"></output><button type="button" id="dminPlus" aria-label="Artır">+</button></div>
+    </div>
+    <div class="field">
+      <div><span class="lbl">En geç</span><span class="desc">Dokunduktan sonra, saniye</span></div>
+      <div class="stepper"><button type="button" id="dmaxMinus" aria-label="Azalt">−</button><output id="dmaxOut"></output><button type="button" id="dmaxPlus" aria-label="Artır">+</button></div>
+    </div>
+    <p class="hint">Oku taktığın andan sarıda oturduğun ana kadar geçen süreyi bir kez kronometreyle ölç (T). Aralığı T+1 ile T+4 saniye yap.</p>
+    <p class="hint warn" id="spreadHint" hidden>Aralık 3 saniyeden darsa komutun zamanı tahmin edilebilir hale gelir.</p>
+
+    <h3>Ses</h3>
+    <div class="field">
+      <div><span class="lbl">Komut sesi</span><span class="desc" id="voiceNote"></span></div>
+      <div class="seg" role="radiogroup" aria-label="Komut sesi">
+        <label><input type="radio" name="sound" id="sndVoice" value="voice"><span>Konuşma</span></label>
+        <label><input type="radio" name="sound" id="sndBeep" value="beep"><span>Bip</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <div><span class="lbl">Kulaklıkta dene</span><span class="desc">Bip modunda AT iki kısa ince, İNDİR tek uzun kalın ses</span></div>
+      <button type="button" class="btn" id="btnTest">Sesi dene</button>
+    </div>
+    <div class="field">
+      <label class="check" for="chkLog"><input type="checkbox" id="chkLog"> <span><span class="lbl">Her yaklaşımın sonucunu kaydet</span><span class="desc">Kapalıyken yalnız komutlar kaydedilir, ilerleme önerisi çıkmaz</span></span></label>
+    </div>
+    <p class="hint warn" id="wakeNote" hidden>Bu telefon ekranı açık tutma iznini vermiyor. Ayarlar &gt; Ekran ve Parlaklık &gt; Otomatik Kilit'i antrenman boyunca "Hiçbir Zaman" yap, yoksa ekran kararınca komut gelmez.</p>
+  </div>
+</div>
+
+<div class="sheet" id="sheetHistory" hidden role="dialog" aria-modal="true" aria-labelledby="hHistory">
+  <div class="panel">
+    <div class="panel-head"><h2 id="hHistory">Kayıtlar</h2><button type="button" class="link" data-close>Kapat</button></div>
+    <p class="hint">Kayıtlar yalnız bu telefonda ve bu tarayıcıda durur, tarayıcı verisi silinince gider. Önemli seansları özetten kopyalayıp kendi notlarına al.</p>
+    <div class="legend" id="histLegend"></div>
+    <div id="histList"></div>
+  </div>
+</div>
+
+<div class="sheet" id="sheetSummary" hidden role="dialog" aria-modal="true" aria-labelledby="hSummary">
+  <div class="panel">
+    <div class="panel-head"><h2 id="hSummary">Seans bitti</h2><button type="button" class="link" data-close>Kapat</button></div>
+    <div id="sumBody" class="sumgrid"></div>
+    <h3>Notlarına aktarmak için</h3>
+    <textarea id="sumText" class="copybox" readonly aria-label="Seans özeti"></textarea>
+    <div><button type="button" class="btn" id="btnCopy">Özeti kopyala</button></div>
+  </div>
+</div>
+
+<div class="sheet" id="sheetHelp" hidden role="dialog" aria-modal="true" aria-labelledby="hHelp">
+  <div class="panel">
+    <div class="panel-head"><h2 id="hHelp">Nasıl kullanılır</h2><button type="button" class="link" data-close>Kapat</button></div>
+    <h3>Her yaklaşım</h3>
+    <ol>
+      <li>Oku tak, sonra ekrandaki büyük alana dokun. Kısa bir tık duyarsın, sayaç sessizce başlar.</li>
+      <li>Sarıya otur ve bekle. Komut rastgele bir anda kulaklığa gelir.</li>
+      <li><b>At</b> gelirse ve rahatsan bırak. Bırakış sen oturmadan gelmek istiyorsa ya da sarıya zorlanarak geldiysen yine indir.</li>
+      <li><b>İndir</b> gelirse indir.</li>
+      <li>Yaklaşımın nasıl geçtiğini seç. Seçtiğin anda sayaç yeniden başlar. Atış yaptıysan önce yeni oku tak, sonra seç.</li>
+      <li>Komut gelmeden ok çıktıysa <b>Komuttan önce bıraktım</b>'a dokun.</li>
+      <li>Ok toplamaya giderken son sonucu seç, ardından <b>Durdur</b>'a bas.</li>
+    </ol>
+    <h3>Sonuçlar</h3>
+    <p><b>Rahat</b> sarıya rahat geldin ve rahat durdun. <b>Tedirgin</b> yaklaşırken gerginlik vardı ama geldin. <b>Zorladım</b> sarıya ancak zorlayarak geldin. <b>Sarıya gelemedim</b> kol sarının altında ya da yanında kaldı. <b>Erken bıraktım</b> ok komutu beklemeden çıktı.</p>
+    <h3>Çalışma planı</h3>
+    <ul>
+      <li>Her seans: yakında boş hedefe 10-15 ok form atışı, ardından komutçuyla 30-40 yaklaşım, kapanışta en kolay basamakta birkaç sakin indiriş.</li>
+      <li>Basamaklar 18 m'de 122 → 80 → 60 → 40 cm. Her yeni yüzde AT olasılığı %25'ten başlar (bırakıştan sonra 2 zorunlu indirişle ortalama 6 yaklaşımda 1 atış), %33 ve %50'ye çıkar. %50'de ölçüt tutunca bir sonraki yüze geçilir.</li>
+      <li>40 cm'de %50'den sonra zorunlu indirişler 2'den 1'e, sonra 0'a iner. En son AT olasılığı %100 olur ve ardından karar sana döner.</li>
+      <li>Ölçüt: en az 15 kayıtlı yaklaşımda rahat oranı yaklaşık %90 ve erken bırakış yok denecek kadar az.</li>
+      <li>Kötü geçen gün bir basamak geri in ve seansı rahat bitir.</li>
+      <li>Merdiven 40 cm'ye ulaşana kadar normal puanlı atış yok.</li>
+    </ul>
+    <h3>Ses ve ekran</h3>
+    <p>Sayfa açık ve ekran yanık kalmalı. Ekran kararırsa ya da başka uygulamaya geçersen o anki yaklaşım iptal olur. iPhone'da antrenman boyunca Otomatik Kilit'i "Hiçbir Zaman" yap ve yandaki sessiz anahtarı kapalı tut. Kulaklığı bağladıktan sonra ayarlardan sesi bir kez dene.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+'use strict';
+var $ = function (id) { return document.getElementById(id); };
+var LS_SET = 'komutcu.settings.v1', LS_CUR = 'komutcu.current.v1', LS_LOC = 'komutcu.sessions.v1';
+var DEF = {distance: 18, face: '122', bow: 'ana', pAt: 25, gap: 2, dmin: 6, dmax: 10, sound: 'voice', logging: true};
+var P_STEPS = [10, 15, 20, 25, 33, 50, 67, 100];
+var DISTANCES = [3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 25, 30, 40, 50];
+var FACES = [['bos', 'Boş hedef'], ['ters', 'Ters kâğıt'], ['kesik', 'Kesik sarı'], ['122', '122 cm'], ['80', '80 cm'], ['60', '60 cm'], ['40', '40 cm']];
+var BOWS = [['ana', 'Salon yayı'], ['acik', 'Açık alan yayı'], ['tahta', 'Tahta yay']];
+var OUT = [['rahat', 'Rahat'], ['tedirgin', 'Tedirgin'], ['zorladim', 'Zorladım'], ['gelemedim', 'Sarıya gelemedim'], ['erken', 'Erken bıraktım']];
+
+function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+function toInt(v, d) { var n = parseInt(v, 10); return isFinite(n) ? n : d; }
+function lsGet(k) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function pick(list, key) { for (var i = 0; i < list.length; i++) if (list[i][0] === String(key)) return list[i]; return null; }
+function faceLabel(f) { var x = pick(FACES, f); return x ? x[1] : String(f); }
+function bowLabel(b) { var x = pick(BOWS, b); return x ? x[1] : String(b || ''); }
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+var stored = lsGet(LS_SET) || {};
+var settings = {};
+Object.keys(DEF).forEach(function (k) { settings[k] = (k in stored) ? stored[k] : DEF[k]; });
+settings.distance = clamp(toInt(settings.distance, 18), 1, 90);
+settings.face = pick(FACES, settings.face) ? String(settings.face) : '122';
+settings.bow = pick(BOWS, settings.bow) ? String(settings.bow) : 'ana';
+settings.pAt = P_STEPS.indexOf(toInt(settings.pAt, 25)) >= 0 ? toInt(settings.pAt, 25) : 25;
+settings.gap = clamp(toInt(settings.gap, 2), 0, 4);
+settings.dmin = clamp(toInt(settings.dmin, 6), 2, 24);
+settings.dmax = clamp(toInt(settings.dmax, 10), settings.dmin + 1, 25);
+if (settings.sound !== 'beep') settings.sound = 'voice';
+settings.logging = settings.logging !== false;
+function saveSettings() { lsSet(LS_SET, settings); }
+
+var session = null, state = 'idle', current = null, timer = null;
+
+/* ---------- komut kuralı ---------- */
+function decide() {
+  if ((session.sinceShot || 0) < settings.gap) return 'indir';
+  return Math.random() * 100 < settings.pAt ? 'at' : 'indir';
+}
+function avgPerShot(p, g) { return g + 100 / p; }
+function fmtNum(x) { return String(Math.round(x * 10) / 10).replace('.', ','); }
+function nextP(p) { for (var i = 0; i < P_STEPS.length; i++) if (P_STEPS[i] > p) return P_STEPS[i]; return p; }
+function prevP(p) { for (var i = P_STEPS.length - 1; i >= 0; i--) if (P_STEPS[i] < p) return P_STEPS[i]; return p; }
+function cmdLabel(s) { return s.pAt != null ? 'AT %' + s.pAt + ' · ' + (s.gap != null ? s.gap : '?') + ' zorunlu indiriş' : (s.ratio ? 'oran 1/' + s.ratio : ''); }
+function released(a) { return a.outcome === 'erken' || (a.cmd === 'at' && a.outcome !== 'zorladim' && a.outcome !== 'gelemedim'); }
+function counts(s) {
+  var c = {total: 0, shots: 0, logged: 0, rahat: 0, tedirgin: 0, zorladim: 0, gelemedim: 0, erken: 0, calmPct: null};
+  (s.approaches || []).forEach(function (a) {
+    c.total++;
+    if (released(a)) c.shots++;
+    if (a.outcome && c.hasOwnProperty(a.outcome)) { c.logged++; c[a.outcome]++; }
+  });
+  if (c.logged) c.calmPct = Math.round(100 * c.rahat / c.logged);
+  return c;
+}
+
+/* ---------- ses ---------- */
+var actx = null, keepOsc = null, silentEl = null, speechUnlocked = false, trVoice = null, voicesSeen = false;
+function hasSpeech() { return 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'; }
+function audio() {
+  if (!actx) { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; try { actx = new AC(); } catch (e) { return null; } }
+  if (actx.state === 'suspended' && actx.resume) { try { actx.resume(); } catch (e) {} }
+  return actx;
+}
+function tone(freq, start, dur, vol) {
+  var c = audio(); if (!c) return;
+  var t = c.currentTime + start, o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine'; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.012);
+  g.gain.setValueAtTime(vol, t + Math.max(0.02, dur - 0.03));
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  o.connect(g); g.connect(c.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+function beep(cmd) { if (cmd === 'at') { tone(1046, 0, 0.13, 0.5); tone(1046, 0.22, 0.13, 0.5); } else { tone(494, 0, 0.55, 0.45); } }
+function click() { tone(1700, 0, 0.03, 0.06); }
+// Sessiz bir döngü çalmak iPhone'da sesi sessiz anahtarından bağımsız medya kanalına alır
+// ve Bluetooth kulaklığın sessizlikte uyuyup komutun başını yutmasını önler.
+function silentUrl() {
+  var n = 8000, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+  function w(o, s) { for (var i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); }
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  w(36, 'data'); v.setUint32(40, n, true);
+  for (var i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], {type: 'audio/wav'}));
+}
+function keepAlive(on) {
+  if (on) {
+    try {
+      if (!silentEl) { silentEl = new Audio(silentUrl()); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); }
+      var p = silentEl.play(); if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+    var c = audio();
+    if (c && !keepOsc) {
+      try { var o = c.createOscillator(), g = c.createGain(); g.gain.value = 0.0001; o.frequency.value = 40; o.connect(g); g.connect(c.destination); o.start(); keepOsc = o; } catch (e) {}
+    }
+  } else {
+    try { if (silentEl) silentEl.pause(); } catch (e) {}
+    if (keepOsc) { try { keepOsc.stop(); } catch (e) {} keepOsc = null; }
+  }
+}
+function pickVoice() {
+  if (!hasSpeech()) return;
+  try {
+    var vs = speechSynthesis.getVoices() || [];
+    if (vs.length) voicesSeen = true;
+    trVoice = null;
+    for (var i = 0; i < vs.length; i++) if (/^tr/i.test(vs[i].lang)) { trVoice = vs[i]; break; }
+  } catch (e) {}
+  renderVoiceNote();
+}
+function unlockAudio() {
+  audio();
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  if (hasSpeech() && !speechUnlocked) {
+    try { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); speechUnlocked = true; } catch (e) {}
+  }
+}
+function speak(text) {
+  if (!hasSpeech()) return false;
+  try {
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'tr-TR'; if (trVoice) u.voice = trVoice; u.rate = 1.05; u.volume = 1;
+    speechSynthesis.speak(u);
+    return true;
+  } catch (e) { return false; }
+}
+function announce(cmd) {
+  if (settings.sound === 'voice' && hasSpeech()) { if (!speak(cmd === 'at' ? 'At' : 'İndir')) beep(cmd); }
+  else beep(cmd);
+  try { if (navigator.vibrate) navigator.vibrate(cmd === 'at' ? [70, 70, 70] : 220); } catch (e) {}
+}
+
+/* ---------- ekranı açık tut ---------- */
+var wake = null, wakeFailed = false;
+function requestWake() {
+  if (wake) return;
+  if (!('wakeLock' in navigator)) { markWakeFailed(); return; }
+  navigator.wakeLock.request('screen').then(function (w) {
+    wake = w; w.addEventListener('release', function () { wake = null; });
+  }, function () { wake = null; markWakeFailed(); });
+}
+function markWakeFailed() {
+  if (wakeFailed) return;
+  wakeFailed = true; $('wakeNote').hidden = false;
+  showNote('Bu telefon ekranı açık tutma iznini vermiyor. Antrenman boyunca Ayarlar > Ekran ve Parlaklık > Otomatik Kilit\'i "Hiçbir Zaman" yap.');
+}
+function releaseWake() { if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
+
+/* ---------- kayıt (yalnız bu cihaz) ---------- */
+function newId() {
+  var d = new Date();
+  return 's-' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds()) + '-' + Math.random().toString(36).slice(2, 6);
+}
+function snapshot(s) {
+  return {id: s.id, startedAt: s.startedAt, endedAt: s.endedAt || null, distance: s.distance, face: s.face, bow: s.bow,
+    pAt: s.pAt, ratio: s.ratio, gap: s.gap, dmin: s.dmin, dmax: s.dmax,
+    approaches: (s.approaches || []).map(function (a) { return {time: a.time, delay: a.delay, cmd: a.cmd, outcome: a.outcome, p: a.p}; })};
+}
+function loadLocal() { var a = lsGet(LS_LOC); return Array.isArray(a) ? a.filter(function (x) { return x && x.id; }) : []; }
+function persist(s) {
+  if (!s) return;
+  if (s === session) lsSet(LS_CUR, s);
+  var a = loadLocal().filter(function (x) { return x.id !== s.id; });
+  a.push(snapshot(s));
+  a.sort(function (x, y) { return String(y.startedAt).localeCompare(String(x.startedAt)); });
+  lsSet(LS_LOC, a.slice(0, 80));
+}
+function removeLocal(id) { lsSet(LS_LOC, loadLocal().filter(function (x) { return x.id !== id; })); }
+
+/* ---------- seans akışı ---------- */
+function ensureSession() {
+  if (session && (session.distance !== settings.distance || session.face !== settings.face || session.bow !== settings.bow)) {
+    if (session.approaches.length) endSession(false);
+    else { session.distance = settings.distance; session.face = settings.face; session.bow = settings.bow; }
+  }
+  if (!session) {
+    session = {id: newId(), startedAt: new Date().toISOString(), endedAt: null, distance: settings.distance, face: settings.face, bow: settings.bow,
+      pAt: settings.pAt, gap: settings.gap, dmin: settings.dmin, dmax: settings.dmax, sinceShot: 0, approaches: []};
+    lsSet(LS_CUR, session);
+  }
+}
+function startApproach() {
+  if (state === 'waiting') return;
+  hideNote();
+  ensureSession();
+  unlockAudio(); keepAlive(true); requestWake();
+  var delayMs = Math.round((settings.dmin + Math.random() * (settings.dmax - settings.dmin)) * 1000);
+  current = {t: Date.now(), delayMs: delayMs, cmd: null, p: settings.pAt, logged: false};
+  state = 'waiting';
+  render(); click();
+  timer = setTimeout(fire, delayMs);
+}
+function fire() {
+  timer = null;
+  if (state !== 'waiting' || !current || !session) return;
+  current.cmd = decide();
+  state = 'called';
+  render();
+  announce(current.cmd);
+  if (!settings.logging) logCurrent(null);
+}
+function logCurrent(outcome) {
+  if (!current || current.logged || !session) return;
+  var a = {time: new Date(current.t).toISOString(), delay: Math.round(current.delayMs / 100) / 10, cmd: current.cmd, outcome: outcome || null, p: current.p};
+  session.approaches.push(a);
+  session.sinceShot = released(a) ? 0 : (session.sinceShot || 0) + 1;
+  session.pAt = settings.pAt; session.gap = settings.gap; session.dmin = settings.dmin; session.dmax = settings.dmax;
+  current.logged = true;
+  persist(session);
+  render();
+}
+function cancelWaiting(msg) {
+  if (timer) { clearTimeout(timer); timer = null; }
+  current = null; state = 'idle'; render();
+  if (msg) showNote(msg);
+}
+function endSession(show) {
+  if (timer) { clearTimeout(timer); timer = null; }
+  if (state === 'called' && current && !current.logged) logCurrent(null);
+  state = 'idle'; current = null;
+  var s = session; session = null; lsSet(LS_CUR, null);
+  keepAlive(false); releaseWake();
+  if (s && s.approaches.length) { s.endedAt = new Date().toISOString(); persist(s); if (show) openSummary(s); }
+  render();
+}
+
+/* ---------- görünüm ---------- */
+var noteTimer = null;
+function showNote(t) { var n = $('note'); n.textContent = t; n.hidden = false; clearTimeout(noteTimer); noteTimer = setTimeout(hideNote, 10000); }
+function hideNote() { $('note').hidden = true; }
+function render() {
+  var st = $('stage'), big = $('tapBig'), sub = $('tapSub');
+  if (state === 'waiting') {
+    st.setAttribute('data-state', 'waiting'); big.textContent = 'Bekle'; sub.textContent = 'Sarıya otur. Komut gelecek.';
+  } else if (state === 'called' && current) {
+    var at = current.cmd === 'at';
+    st.setAttribute('data-state', at ? 'at' : 'indir');
+    big.textContent = at ? 'At' : 'İndir';
+    var t = at ? 'Rahatsan bırak. Değilsen indir.' : 'İndir ve yeniden kalk.';
+    if (!settings.logging) t += ' Sıradaki için dokun.';
+    sub.textContent = t;
+  } else {
+    st.setAttribute('data-state', 'idle'); big.textContent = 'Oku taktım';
+    sub.textContent = 'Dokun. Komut ' + settings.dmin + '–' + settings.dmax + ' sn içinde rastgele bir anda gelir.';
+  }
+  $('waitbar').hidden = state !== 'waiting';
+  $('pads').hidden = !(state === 'called' && settings.logging && current && !current.logged);
+  var c = session ? counts(session) : null;
+  $('stApp').textContent = c ? c.total : 0;
+  $('stShot').textContent = c ? c.shots : 0;
+  $('stCalm').textContent = c && c.calmPct != null ? '%' + c.calmPct : '–';
+  $('chipText').textContent = 'AT %' + settings.pAt + ' · ' + settings.dmin + '–' + settings.dmax + ' sn · ' + settings.distance + ' m · ' + faceLabel(settings.face) + ' · ' + bowLabel(settings.bow);
+  $('btnEnd').disabled = !session;
+}
+function ruleText() {
+  var p = settings.pAt, g = settings.gap, t = '';
+  if (p >= 100 && g === 0) return 'Her yaklaşımda AT gelir, yalnız zamanı rastgele. Bu, kararı kendine almadan önceki son basamak.';
+  if (g > 0) t += 'Seans başında ve her bırakıştan sonra ilk ' + g + ' yaklaşım hep İNDİR. Sonrasında her yaklaşımda AT gelme olasılığı %' + p + '. ';
+  else t += 'Her yaklaşımda AT gelme olasılığı %' + p + '. ';
+  t += 'Ortalama ' + fmtNum(avgPerShot(p, g)) + ' yaklaşımda 1 atış.';
+  if (p >= 100) t += ' Bu ayarda sıra tahmin edilebilir: ' + g + ' indirişten sonra hep AT gelir.';
+  return t;
+}
+function renderVoiceNote() {
+  var n = $('voiceNote');
+  if (!hasSpeech()) n.textContent = 'Bu tarayıcı konuşmayı desteklemiyor, bip çalınır.';
+  else if (trVoice) n.textContent = 'Türkçe ses: ' + trVoice.name;
+  else if (voicesSeen) n.textContent = 'Türkçe ses bulunamadı. Telefonun metin okuma ayarlarından Türkçe ses indirilebilir, o zamana kadar Bip daha net.';
+  else n.textContent = 'Sesi bir kez denemen yeterli.';
+}
+function renderSettings() {
+  $('pOut').textContent = '%' + settings.pAt;
+  $('gapOut').textContent = settings.gap;
+  $('dminOut').textContent = settings.dmin;
+  $('dmaxOut').textContent = settings.dmax;
+  $('ruleText').textContent = ruleText();
+  $('spreadHint').hidden = settings.dmax - settings.dmin >= 3;
+  $('sndVoice').checked = settings.sound === 'voice';
+  $('sndBeep').checked = settings.sound === 'beep';
+  $('chkLog').checked = settings.logging;
+  $('selDistance').value = String(settings.distance);
+  $('selFace').value = settings.face;
+  $('selBow').value = settings.bow;
+  $('pMinus').disabled = settings.pAt <= P_STEPS[0]; $('pPlus').disabled = settings.pAt >= P_STEPS[P_STEPS.length - 1];
+  $('gapMinus').disabled = settings.gap <= 0; $('gapPlus').disabled = settings.gap >= 4;
+  $('dminMinus').disabled = settings.dmin <= 2; $('dminPlus').disabled = settings.dmin >= 24;
+  $('dmaxMinus').disabled = settings.dmax <= 3; $('dmaxPlus').disabled = settings.dmax >= 25;
+  renderVoiceNote();
+}
+function changed() { saveSettings(); renderSettings(); render(); }
+
+/* ---------- kayıtlar ve özet ---------- */
+function fmtWhen(iso) {
+  try { return new Date(iso).toLocaleString('tr-TR', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}); }
+  catch (e) { return String(iso || ''); }
+}
+function pillClass(p) { return p == null ? 'pill' : p >= 90 ? 'pill ok' : p >= 75 ? 'pill warn' : 'pill bad'; }
+function bar(c) {
+  var b = el('div', 'bar'), parts = [];
+  b.setAttribute('role', 'img');
+  OUT.forEach(function (o) {
+    if (c[o[0]] > 0) { var i = el('i', 'o-' + o[0]); i.style.width = (100 * c[o[0]] / c.logged) + '%'; b.appendChild(i); parts.push(o[1] + ' ' + c[o[0]]); }
+  });
+  b.setAttribute('aria-label', parts.length ? parts.join(', ') : 'Kayıtlı sonuç yok');
+  return b;
+}
+function fillLegend(L, c) {
+  L.textContent = '';
+  OUT.forEach(function (o) { var s = el('span'); s.appendChild(el('i', 'o-' + o[0])); s.appendChild(document.createTextNode(c ? o[1] + ' ' + c[o[0]] : o[1])); L.appendChild(s); });
+  return L;
+}
+function stepLabel(s) { return s.distance + ' m · ' + faceLabel(s.face) + (s.bow ? ' · ' + bowLabel(s.bow) : ''); }
+function advice(s) {
+  var c = counts(s);
+  if (c.logged < 15) return 'Öneri için en az 15 kayıtlı yaklaşım gerekiyor. Bu seansta ' + c.logged + ' var.';
+  if (s.pAt == null) return 'Rahat oranı %' + c.calmPct + '.';
+  var p = s.pAt, g = s.gap || 0, early = 100 * c.erken / c.logged, head = 'Rahat oranı %' + c.calmPct + '. ';
+  if (c.calmPct >= 90 && early <= 5) {
+    if (p < 50) return head + 'Bir sonraki seansta AT olasılığını %' + nextP(p) + ' yapabilirsin.';
+    if (s.face !== '40') return head + 'Bir sonraki yüze geç ve AT olasılığını yine %25 ile başlat.';
+    if (g > 0) return head + 'Bırakıştan sonraki zorunlu indirişi ' + (g - 1) + ' yap.';
+    if (p < 100) return head + 'Bir sonraki seansta AT olasılığını %' + nextP(p) + ' yapabilirsin.';
+    return head + 'Sıradaki adım kararı kendine almak: 3 okluk serilerde, rahat değilsen indirerek.';
+  }
+  if (c.calmPct < 75 || early > 10) return head + (c.erken ? 'Erken bırakış ' + c.erken + '. ' : '') + 'Bir kademe geri al: AT olasılığını %' + prevP(p) + ' yap ya da bir önceki yüze dön.';
+  return head + 'Aynı ayarla devam et, %90 civarına gelince bir kademe aç.';
+}
+function summaryText(s) {
+  var c = counts(s);
+  var t = fmtWhen(s.startedAt) + ' · ' + stepLabel(s) + ' · ' + cmdLabel(s) + ' · ' + c.total + ' yaklaşım · ' + c.shots + ' atış';
+  if (c.calmPct != null) t += ' · rahat %' + c.calmPct;
+  if (c.logged) t += '\n' + OUT.map(function (o) { return o[1] + ' ' + c[o[0]]; }).join(', ');
+  return t;
+}
+function openSummary(s) {
+  var c = counts(s), box = $('sumBody');
+  box.textContent = '';
+  var first = s.approaches[0], last = s.approaches[s.approaches.length - 1];
+  var mins = first && last ? Math.max(1, Math.round((Date.parse(last.time) - Date.parse(first.time)) / 60000)) : 0;
+  box.appendChild(el('p', 'hint', fmtWhen(s.startedAt) + ' · ' + stepLabel(s) + ' · ' + cmdLabel(s) + ' · ' + mins + ' dk'));
+  var top = el('div');
+  top.appendChild(el('div', 'sumbig', c.calmPct != null ? '%' + c.calmPct : '–'));
+  top.appendChild(el('div', 'desc', 'rahat · ' + c.total + ' yaklaşım · ' + c.shots + ' atış'));
+  box.appendChild(top);
+  if (c.logged) { box.appendChild(bar(c)); box.appendChild(fillLegend(el('div', 'legend'), c)); }
+  box.appendChild(el('p', 'advice', advice(s)));
+  $('sumText').value = summaryText(s) + '\n' + advice(s);
+  $('btnCopy').textContent = 'Özeti kopyala';
+  openSheet('sheetSummary');
+}
+function openHistory() {
+  openSheet('sheetHistory');
+  fillLegend($('histLegend'), null);
+  var list = $('histList'); list.textContent = '';
+  var items = loadLocal();
+  if (session && session.approaches.length) {
+    items = items.filter(function (x) { return x.id !== session.id; });
+    items.unshift(snapshot(session));
+  }
+  items.sort(function (x, y) { return String(y.startedAt).localeCompare(String(x.startedAt)); });
+  if (!items.length) { list.appendChild(el('p', 'empty', 'Henüz seans yok. İlk yaklaşımda seans kendiliğinden başlar ve buraya düşer.')); return; }
+  items.forEach(function (s) { list.appendChild(historyRow(s)); });
+}
+function historyRow(s) {
+  var c = counts(s), row = el('div', 'hrow');
+  var live = !!(session && session.id === s.id);
+  var l1 = el('div', 'l1'), left = el('div');
+  left.appendChild(el('span', 'when', fmtWhen(s.startedAt) + ' '));
+  left.appendChild(el('span', 'where', stepLabel(s)));
+  if (live) left.appendChild(el('span', 'live', 'sürüyor'));
+  l1.appendChild(left);
+  l1.appendChild(el('span', pillClass(c.calmPct), c.calmPct != null ? '%' + c.calmPct : '–'));
+  row.appendChild(l1);
+  if (c.logged) row.appendChild(bar(c));
+  var l3 = el('div', 'l3');
+  var meta = c.total + ' yaklaşım · ' + c.shots + ' atış · ' + cmdLabel(s);
+  if (c.erken) meta += ' · erken ' + c.erken;
+  if (c.gelemedim) meta += ' · gelemedim ' + c.gelemedim;
+  l3.appendChild(el('span', '', meta));
+  if (!live) {
+    var del = el('button', 'link', 'Sil'); del.type = 'button';
+    var armT = null;
+    del.addEventListener('click', function () {
+      if (!del.getAttribute('data-arm')) {
+        del.setAttribute('data-arm', '1'); del.textContent = 'Emin misin? Sil';
+        armT = setTimeout(function () { del.removeAttribute('data-arm'); del.textContent = 'Sil'; }, 4000);
+        return;
+      }
+      clearTimeout(armT);
+      removeLocal(s.id);
+      if (row.parentNode) row.parentNode.removeChild(row);
+    });
+    l3.appendChild(del);
+  }
+  row.appendChild(l3);
+  return row;
+}
+var lastFocus = null;
+function openSheet(id) { lastFocus = document.activeElement; var s = $(id); s.hidden = false; var b = s.querySelector('[data-close]'); if (b) b.focus(); }
+function closeSheets() {
+  var all = document.querySelectorAll('.sheet');
+  for (var i = 0; i < all.length; i++) all[i].hidden = true;
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+
+/* ---------- olaylar ---------- */
+$('tap').addEventListener('click', function () {
+  if (state === 'idle') startApproach();
+  else if (state === 'called' && (!settings.logging || (current && current.logged))) startApproach();
+});
+var pads = document.querySelectorAll('.pad');
+for (var pi = 0; pi < pads.length; pi++) {
+  pads[pi].addEventListener('click', function (e) {
+    if (state !== 'called') return;
+    logCurrent(e.currentTarget.getAttribute('data-o'));
+    startApproach();
+  });
+}
+$('btnEarly').addEventListener('click', function () {
+  if (state !== 'waiting' || !current) return;
+  if (timer) { clearTimeout(timer); timer = null; }
+  current.cmd = null;
+  logCurrent('erken');
+  current = null; state = 'idle'; render();
+  showNote('Kaydedildi. Yeni oku takınca dokun.');
+});
+$('btnStop').addEventListener('click', function () { cancelWaiting(''); });
+$('btnEnd').addEventListener('click', function () { endSession(true); });
+$('btnHistory').addEventListener('click', openHistory);
+$('btnHelp').addEventListener('click', function () { openSheet('sheetHelp'); });
+$('btnSettings').addEventListener('click', function () { renderSettings(); openSheet('sheetSettings'); });
+var closers = document.querySelectorAll('[data-close]');
+for (var ci = 0; ci < closers.length; ci++) closers[ci].addEventListener('click', closeSheets);
+var sheets = document.querySelectorAll('.sheet');
+for (var si = 0; si < sheets.length; si++) {
+  sheets[si].addEventListener('click', function (e) { if (e.target === e.currentTarget) closeSheets(); });
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
+$('btnCopy').addEventListener('click', function () {
+  var ta = $('sumText'), btn = $('btnCopy');
+  function fallback() { ta.focus(); ta.select(); try { ta.setSelectionRange(0, ta.value.length); } catch (e) {} btn.textContent = 'Metin seçildi, Kopyala ile al'; }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(function () { btn.textContent = 'Kopyalandı'; }, fallback);
+    } else fallback();
+  } catch (e) { fallback(); }
+});
+
+function stepper(minus, plus, fn) {
+  $(minus).addEventListener('click', function () { fn(-1); changed(); });
+  $(plus).addEventListener('click', function () { fn(1); changed(); });
+}
+stepper('pMinus', 'pPlus', function (d) { settings.pAt = d > 0 ? nextP(settings.pAt) : prevP(settings.pAt); });
+stepper('gapMinus', 'gapPlus', function (d) { settings.gap = clamp(settings.gap + d, 0, 4); });
+stepper('dminMinus', 'dminPlus', function (d) { settings.dmin = clamp(settings.dmin + d, 2, 24); if (settings.dmax <= settings.dmin) settings.dmax = settings.dmin + 1; });
+stepper('dmaxMinus', 'dmaxPlus', function (d) { settings.dmax = clamp(settings.dmax + d, 3, 25); if (settings.dmin >= settings.dmax) settings.dmin = settings.dmax - 1; });
+
+function fillSelect(sel, items) { items.forEach(function (it) { var o = el('option', '', it[1]); o.value = it[0]; sel.appendChild(o); }); }
+var dl = DISTANCES.slice();
+if (dl.indexOf(settings.distance) < 0) { dl.push(settings.distance); dl.sort(function (a, b) { return a - b; }); }
+fillSelect($('selDistance'), dl.map(function (d) { return [String(d), d + ' m']; }));
+fillSelect($('selFace'), FACES);
+fillSelect($('selBow'), BOWS);
+$('selDistance').addEventListener('change', function () { settings.distance = toInt($('selDistance').value, 18); changed(); });
+$('selFace').addEventListener('change', function () { settings.face = $('selFace').value; changed(); });
+$('selBow').addEventListener('change', function () { settings.bow = $('selBow').value; changed(); });
+var radios = document.querySelectorAll('input[name="sound"]');
+for (var ri = 0; ri < radios.length; ri++) {
+  radios[ri].addEventListener('change', function (e) { if (e.currentTarget.checked) { settings.sound = e.currentTarget.value; changed(); } });
+}
+$('chkLog').addEventListener('change', function () {
+  settings.logging = $('chkLog').checked;
+  if (!settings.logging && state === 'called' && current && !current.logged) logCurrent(null);
+  changed();
+});
+$('btnTest').addEventListener('click', function () {
+  unlockAudio(); keepAlive(true);
+  announce('at');
+  setTimeout(function () { announce('indir'); }, 1300);
+  setTimeout(function () { if (!session) keepAlive(false); }, 3500);
+});
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') { if (state === 'waiting') cancelWaiting('Ekran arka plana geçti, o yaklaşım iptal edildi.'); }
+  else if (session) requestWake();
+});
+if (hasSpeech()) {
+  pickVoice();
+  try { speechSynthesis.addEventListener('voiceschanged', pickVoice); } catch (e) { speechSynthesis.onvoiceschanged = pickVoice; }
+}
+
+/* ---------- açılış ---------- */
+(function restore() {
+  var s = lsGet(LS_CUR);
+  if (!s || !s.id || !Array.isArray(s.approaches) || s.endedAt) { lsSet(LS_CUR, null); return; }
+  var lastT = s.approaches.length ? Date.parse(s.approaches[s.approaches.length - 1].time) : Date.parse(s.startedAt);
+  if (Date.now() - lastT < 3 * 3600 * 1000) { session = s; return; }
+  lsSet(LS_CUR, null);
+  if (s.approaches.length) { s.endedAt = new Date(lastT).toISOString(); persist(s); }
+})();
+renderSettings();
+render();
+})();
+</script>
+</body>
+</html>
